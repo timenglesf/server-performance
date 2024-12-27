@@ -25,6 +25,7 @@ function get_cpu_stats() {
 function get_memory_stats() {
   memory_used=$(free -ht | grep "Total" | awk '{print $3}')
   memory_free=$(free -ht | grep "Total" | awk '{print $4}')
+  memory_available=$(free -ht | grep -i "mem" | awk '{print $7}')
 }
 
 # Get 5 CPU using processes
@@ -32,7 +33,6 @@ function get_top_5_cpu() {
   # Capture the top output, remove headers, and limit to top 5 processes by CPU usage
   top_output=$(top -b -n1 -o %CPU | sed -e '1,7d' -e '13,$d' |
     awk '{printf "%-15s %5.1f\n", $12, $9}')
-
 }
 
 # ------------- Display Functions ---------------
@@ -44,14 +44,15 @@ function display_heading() {
 
 function display_cpu() {
   get_cpu_stats
-  printf "%-12s %8s%%\n" "CPU Used:" "$cpu_used"
-  printf "%-12s %8s%%\n" "CPU Free:" "$cpu_idle"
+  printf "%-17s %8s%%\n" "CPU Used:" "$cpu_used"
+  printf "%-17s %8s%%\n" "CPU Free:" "$cpu_idle"
 }
 
 function display_memory() {
   get_memory_stats
-  printf "%-12s %9s\n" "Memory Used:" "$memory_used"
-  printf "%-12s %9s\n" "Memory Free:" "$memory_free"
+  printf "%-17s %9s\n" "Memory Used:" "$memory_used"
+  printf "%-17s %9s\n" "Memory Free:" "$memory_free"
+  printf "%-17s %9s\n" "Memory Available:" "$memory_available"
 }
 
 function display_top_5_cpu() {
@@ -65,9 +66,12 @@ function display_top_5_cpu() {
   printf "%s\n" "$top_output"
 }
 
-display_heading
-echo ""
-display_memory
-display_cpu
-echo ""
-display_top_5_cpu
+# Only execute the display functions if the script is run directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  display_heading
+  echo ""
+  display_memory
+  display_cpu
+  echo ""
+  display_top_5_cpu
+fi
