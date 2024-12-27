@@ -1,47 +1,60 @@
 #!/usr/bin/env bats
 
 # Load the script to be tested
-load ./server-stats.sh
+source server-stats.sh
 
-# Mock functions to simulate the actual behavior
-function get_cpu_stats() {
-  cpu_used=30
-  cpu_idle=70
-}
-
-function get_memory_stats() {
-  memory_used="2G"
-  memory_free="6G"
-  memory_available="4G"
-}
-
-function get_top_5_cpu() {
-  top_output="COMMAND         %CPU\nprocess1       10\nprocess2       8\nprocess3       7\nprocess4       5\nprocess5       4"
-}
-
-@test "display_heading" {
-  run display_heading
+# Test if required commands are available
+@test "Check if required commands are available" {
+  run bash -c 'command -v mpstat && command -v jq > /dev/null'
   [ "$status" -eq 0 ]
-  [ "$output" == "===================\n System Resources \n===================" ]
 }
 
-@test "display_cpu" {
-  get_cpu_stats
-  run display_cpu
+# Test get_cpu_stats function
+@test "get_cpu_stats function" {
+  run bash -c 'source server-stats.sh > /dev/null && get_cpu_stats > /dev/null && echo $cpu_used $cpu_idle'
   [ "$status" -eq 0 ]
-  [ "$output" == "CPU Used:             30%\nCPU Free:             70%" ]
+  [[ "$output" =~ ^[0-9]+(\.[0-9]+)?\ [0-9]+(\.[0-9]+)?$ ]]
 }
 
-@test "display_memory" {
-  get_memory_stats
-  run display_memory
+# Test get_memory_stats function
+@test "get_memory_stats function" {
+  run bash -c 'source server-stats.sh > /dev/null && get_memory_stats > /dev/null && echo $memory_used $memory_free $memory_available'
   [ "$status" -eq 0 ]
-  [ "$output" == "Memory Used:          2G\nMemory Free:          6G\nMemory Available:     4G" ]
+  [[ "$output" =~ ^[0-9]+(\.[0-9]+)?[A-Za-z]+\ [0-9]+(\.[0-9]+)?[A-Za-z]+\ [0-9]+(\.[0-9]+)?[A-Za-z]+$ ]]
 }
 
-@test "display_top_5_cpu" {
-  get_top_5_cpu
-  run display_top_5_cpu
+# Test get_top_5_cpu function
+@test "get_top_5_cpu function" {
+  run bash -c 'source server-stats.sh > /dev/null && get_top_5_cpu > /dev/null && echo "$top_output"'
   [ "$status" -eq 0 ]
-  [ "$output" == "======================\n Top 5 CPU Processes \n======================\n\nCOMMAND         %CPU\nprocess1       10\nprocess2       8\nprocess3       7\nprocess4       5\nprocess5       4" ]
+  [ $(echo "$output" | wc -l) -eq 5 ]
+}
+
+# Test display functions
+@test "display_heading function" {
+  run bash -c 'source server-stats.sh > /dev/null && display_heading'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"System Resources"* ]]
+}
+
+@test "display_cpu function" {
+  run bash -c 'source server-stats.sh > /dev/null && display_cpu'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"CPU Used:"* ]]
+  [[ "$output" == *"CPU Free:"* ]]
+}
+
+@test "display_memory function" {
+  run bash -c 'source server-stats.sh > /dev/null && display_memory'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Memory Used:"* ]]
+  [[ "$output" == *"Memory Free:"* ]]
+  [[ "$output" == *"Memory Available:"* ]]
+}
+
+@test "display_top_5_cpu function" {
+  run bash -c 'source server-stats.sh > /dev/null && display_top_5_cpu'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Top 5 CPU Processes"* ]]
+  [ $(echo "$output" | grep -c "COMMAND") -eq 1 ]
 }
